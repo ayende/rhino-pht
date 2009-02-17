@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.PersistentHashTable", "Rhino.PersistentHashTable\Rhino.PersistentHashTable.csproj", "{F30B2D63-CED5-4C8A-908F-0B5503D984A9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.PersistentHashTable.Tests", "Rhino.PersistentHashTable.Tests\Rhino.PersistentHashTable.Tests.csproj", "{3BC9E44C-6E3B-4E3C-B7E1-4850C3DB5251}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F30B2D63-CED5-4C8A-908F-0B5503D984A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F30B2D63-CED5-4C8A-908F-0B5503D984A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F30B2D63-CED5-4C8A-908F-0B5503D984A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F30B2D63-CED5-4C8A-908F-0B5503D984A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BC9E44C-6E3B-4E3C-B7E1-4850C3DB5251}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BC9E44C-6E3B-4E3C-B7E1-4850C3DB5251}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BC9E44C-6E3B-4E3C-B7E1-4850C3DB5251}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BC9E44C-6E3B-4E3C-B7E1-4850C3DB5251}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
