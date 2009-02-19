@@ -8,7 +8,7 @@ namespace Rhino.PersistentHashTable
 	public class SchemaCreator
     {
         private readonly Session session;
-		public const string SchemaVersion = "1.4";
+		public const string SchemaVersion = "1.5";
 
 		public SchemaCreator(Session session)
         {
@@ -180,6 +180,12 @@ namespace Rhino.PersistentHashTable
             {
                 coltyp = JET_coltyp.Long,
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "timestamp", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.DateTime,
+                grbit = ColumndefGrbit.ColumnFixed
             }, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "data", new JET_COLUMNDEF

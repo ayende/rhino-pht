@@ -9,6 +9,38 @@ namespace Rhino.PersistentHashTable.Tests
 {
 	public class PersistentHashTableTests : PersistentTestBase
 	{
+        [Fact]
+        public void Can_get_timestamp_from_pht()
+        {
+            using (var table = new PersistentHashTable(testDatabase))
+            {
+                table.Initialize();
+
+                table.Batch(actions =>
+                {
+                    actions.Put(new PutRequest
+                    {
+                        Bytes = new byte[] {1, 2,},
+                        Key = "test",
+                        ParentVersions = new ValueVersion[0]
+                    });
+
+
+                    actions.Commit();
+                });
+
+                table.Batch(actions =>
+                {
+                    var values = actions.Get(new GetRequest{Key = "test"});
+
+                    Assert.NotEqual(DateTime.MinValue, values[0].Timestamp);
+
+                    actions.Commit();
+                });
+            }
+
+        }
+
 		[Fact]
 		public void Id_of_table_is_persistent()
 		{
