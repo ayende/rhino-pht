@@ -10,7 +10,6 @@ namespace Rhino.PersistentHashTable
 {
 	public class PersistentHashTableActions : IDisposable
 	{
-		private readonly string database;
 		private readonly Session session;
 		private readonly Transaction transaction;
 		private readonly Table keys;
@@ -63,7 +62,6 @@ namespace Rhino.PersistentHashTable
 
 		public PersistentHashTableActions(Instance instance, string database, Cache cache, Guid instanceId)
 		{
-			this.database = database;
 			this.cache = cache;
 			this.instanceId = instanceId;
 			session = new Session(instance);
@@ -448,6 +446,10 @@ namespace Rhino.PersistentHashTable
 				keys.Dispose();
 			if (data != null)
 				data.Dispose();
+            if (identity != null)
+                identity.Dispose();
+            if (list != null)
+                list.Dispose();
 
 			if (Equals(dbid, JET_DBID.Nil) == false)
 				Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
