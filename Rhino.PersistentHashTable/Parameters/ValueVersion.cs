@@ -18,7 +18,7 @@ namespace Rhino.PersistentHashTable
 
         public override string ToString()
         {
-            return InstanceId + "~@~" + Number;
+            return InstanceId + "/" + Number;
         }
     }
 }

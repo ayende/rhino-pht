@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Rhino.PersistentHashTable.AddItemRequest">
+    <Position X="1.75" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAQAAAAAAAAAAAAAABAAAAAAAAAAAAA=</HashCode>
+      <FileName>Parameters\AddItemRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Rhino.PersistentHashTable.ValueVersion" BaseTypeListCollapsed="true">
+    <Position X="9.75" Y="1" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAQEAEAAAAAAAAAAAAAAAAAAAAAAQAA=</HashCode>
+      <FileName>Parameters\ValueVersion.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="Rhino.PersistentHashTable.GetItemsRequest">
+    <Position X="3.5" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Parameters\GetItemsRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Rhino.PersistentHashTable.GetRequest">
+    <Position X="0.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAABAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Parameters\GetRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Rhino.PersistentHashTable.PutRequest">
+    <Position X="5" Y="0.5" Width="1.75" />
+    <Members>
+      <Field Name="parentVersions" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AAAAAAIAABAAAAQAAAAAAAEAABAAAAQAAAAIAAAAAAA=</HashCode>
+      <FileName>Parameters\PutRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Rhino.PersistentHashTable.PutResult">
+    <Position X="3.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Parameters\PutResult.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Rhino.PersistentHashTable.RemoveItemRequest">
+    <Position X="5.25" Y="4" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Parameters\RemoveItemRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Rhino.PersistentHashTable.RemoveRequest">
+    <Position X="0.5" Y="1.75" Width="1.5" />
+    <Members>
+      <Field Name="parentVersions" Hidden="true" />
+    </Members>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAABAAAAQAAAAAAAAAABAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Parameters\RemoveRequest.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Rhino.PersistentHashTable.Value">
+    <Position X="8" Y="1" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAAAAIAABAAAAQAAAACAAEAAAAAABAAAAAAAAAAAAA=</HashCode>
+      <FileName>Parameters\Value.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Tahoma" Size="8.25" />
+</ClassDiagram>

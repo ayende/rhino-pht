@@ -19,16 +19,22 @@ namespace Rhino.PersistentHashTable
         {
             JET_DBID dbid;
             Api.JetCreateDatabase(session, database, null, out dbid, CreateDatabaseGrbit.None);
-
-            using (var tx = new Transaction(session))
+            try
             {
-				CreateDetailsTable(dbid);
-            	CreateIdentityTable(dbid);
-                CreateKeysTable(dbid);
-                CreateDataTable(dbid);
-				CreateListTable(dbid);
+                using (var tx = new Transaction(session))
+                {
+                    CreateDetailsTable(dbid);
+                    CreateIdentityTable(dbid);
+                    CreateKeysTable(dbid);
+                    CreateDataTable(dbid);
+                    CreateListTable(dbid);
 
-                tx.Commit(CommitTransactionGrbit.None);
+                    tx.Commit(CommitTransactionGrbit.None);
+                }
+            }
+            finally
+            {
+               Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
             }
         }
 
@@ -105,7 +111,7 @@ namespace Rhino.PersistentHashTable
 			using(var update = new Update(session, tableid, JET_prep.Insert))
 			{
 				Api.SetColumn(session, tableid, id, Guid.NewGuid().ToByteArray());
-				Api.SetColumn(session, tableid, schemaVersion, SchemaVersion,Encoding.Unicode);
+				Api.SetColumn(session, tableid, schemaVersion, SchemaVersion, Encoding.Unicode);
 				update.Save();
 			}
     	}
@@ -216,7 +222,7 @@ namespace Rhino.PersistentHashTable
             }, null, 0, out columnid);
 
 
-            var indexDef = "+key\0+version_number\0+version_instance_id\0\0";
+            const string indexDef = "+key\0+version_number\0+version_instance_id\0\0";
             Api.JetCreateIndex(session, tableid, "pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
                                100);
         }

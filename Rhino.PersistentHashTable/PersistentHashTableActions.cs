@@ -119,7 +119,7 @@ namespace Rhino.PersistentHashTable
 					var copy = parentVersion;
 					commitSyncronization.Add(() => cache.Remove(GetKey(request.Key, copy)));
 				}
-				DeleteInactiveVersions(request.Key, request.ParentVersions);
+				DeleteAllKeyValuesForVersions(request.Key, request.ParentVersions);
 			}
 
 			var instanceIdForRow = instanceId;
@@ -132,9 +132,8 @@ namespace Rhino.PersistentHashTable
 			using (var update = new Update(session, keys, JET_prep.Insert))
 			{
 				Api.SetColumn(session, keys, keysColumns["key"], request.Key, Encoding.Unicode);
-				Api.SetColumn(session, keys, keysColumns["version_instance_id"], instanceIdForRow.ToByteArray());
-
-
+				
+                Api.SetColumn(session, keys, keysColumns["version_instance_id"], instanceIdForRow.ToByteArray());
 				Api.SetColumn(session, keys, keysColumns["version_number"], versionNumber);
 
 				if (request.ExpiresAt.HasValue)
@@ -171,7 +170,7 @@ namespace Rhino.PersistentHashTable
 			};
 		}
 
-		private byte[] GetSha256Hash(PutRequest request)
+		private static byte[] GetSha256Hash(PutRequest request)
 		{
 			byte[] hash;
 			using (var sha256 = SHA256.Create())
@@ -180,7 +179,10 @@ namespace Rhino.PersistentHashTable
 			}
 			return hash;
 		}
-
+        
+        // insert into identity values(default);
+        // select @@identity into @new_identity
+        // delete from identity where id = @new_identity
 		private int GenerateVersionNumber()
 		{
 			var bookmark = new byte[Api.BookmarkMost];
@@ -192,8 +194,9 @@ namespace Rhino.PersistentHashTable
 			}
 			Api.JetGotoBookmark(session, identity, bookmark, bookmarkSize);
 			var version = Api.RetrieveColumnAsInt32(session, identity, identityColumns["id"]);
-			Api.JetDelete(session, identity);
-			return version.Value;
+            if (Api.TryMovePrevious(session, identity))
+                Api.JetDelete(session, identity);
+            return version.Value;
 
 		}
 
@@ -284,6 +287,7 @@ namespace Rhino.PersistentHashTable
 
 			return values.ToArray();
 		}
+
 
 		private Value ReadValueFromDataTable(ValueVersion version, string key)
 		{
@@ -389,7 +393,12 @@ namespace Rhino.PersistentHashTable
 			};
 		}
 
-		private void DeleteInactiveVersions(string key, IEnumerable<ValueVersion> versions)
+        // delete from keys
+        // where key = key and version in (versions)
+        //
+        // delete from data
+        // where key = key and version in (versions)
+		private void DeleteAllKeyValuesForVersions(string key, IEnumerable<ValueVersion> versions)
 		{
 			ApplyToKeyAndActiveVersions(keys, versions, key,
 				version => Api.JetDelete(session, keys));
@@ -398,6 +407,9 @@ namespace Rhino.PersistentHashTable
 				Api.JetDelete(session, data));
 		}
 
+        // select * from :table 
+        // where pk.0 = :key and pk.1 = :version.number
+        // and pk.3 = :version.instanceId
 		private void ApplyToKeyAndActiveVersions(Table table, IEnumerable<ValueVersion> versions, string key, Action<ValueVersion> action)
 		{
 			Api.JetSetCurrentIndex(session, table, "pk");
@@ -414,6 +426,8 @@ namespace Rhino.PersistentHashTable
 			}
 		}
 
+        // select new ValueVersion(version_number, version_instance_id) 
+        // from keys where key = :key
 		private ValueVersion[] GatherActiveVersions(string key)
 		{
 			var cachedActiveVersions = cache[GetKey(key)];
@@ -466,7 +480,7 @@ namespace Rhino.PersistentHashTable
 			var doesAllVersionsMatch = DoesAllVersionsMatch(request.Key, request.ParentVersions);
 			if (doesAllVersionsMatch)
 			{
-				DeleteInactiveVersions(request.Key, request.ParentVersions);
+				DeleteAllKeyValuesForVersions(request.Key, request.ParentVersions);
 
 				foreach (var version in request.ParentVersions)
 				{

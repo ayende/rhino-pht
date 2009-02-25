@@ -28,11 +28,7 @@ namespace Rhino.PersistentHashTable
 
         public void Initialize()
         {
-            instance.Parameters.CircularLog = true;
-            instance.Parameters.CreatePathIfNotExist = true;
-            instance.Parameters.TempDirectory = Path.Combine(path, "temp");
-            instance.Parameters.SystemDirectory = Path.Combine(path, "system");
-            instance.Parameters.LogFileDirectory = Path.Combine(path, "logs");
+            ConfigureInstance(instance);
 
             try
             {
@@ -51,6 +47,16 @@ namespace Rhino.PersistentHashTable
                 needToDisposeInstance = false;
                 throw new InvalidOperationException("Could not open cache: " + database, e);
             }
+        }
+
+        private void ConfigureInstance(Instance esentInstance)
+        {
+            esentInstance.Parameters.CircularLog = true;
+            esentInstance.Parameters.Recovery = true;
+            esentInstance.Parameters.CreatePathIfNotExist = true;
+            esentInstance.Parameters.TempDirectory = Path.Combine(path, "temp");
+            esentInstance.Parameters.SystemDirectory = Path.Combine(path, "system");
+            esentInstance.Parameters.LogFileDirectory = Path.Combine(path, "logs");
         }
 
         private void SetIdFromDb()
@@ -90,6 +96,29 @@ namespace Rhino.PersistentHashTable
                 }
                 catch (EsentErrorException e)
                 {
+                    if(e.Error==JET_err.DatabaseDirtyShutdown)
+                    {
+                        try
+                        {
+                            using (var recoverInstance = new Instance("Recovery instance for: " + database))
+                            {
+                                recoverInstance.Init();
+                                using (var recoverSession = new Session(recoverInstance))
+                                {
+                                    ConfigureInstance(recoverInstance);
+                                    Api.JetAttachDatabase(recoverSession, database,
+                                                          AttachDatabaseGrbit.DeleteCorruptIndexes);
+                                    Api.JetDetachDatabase(recoverSession, database);
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                        }
+
+                        Api.JetAttachDatabase(session, database, AttachDatabaseGrbit.None);
+                        return;
+                    }
                     if (e.Error != JET_err.FileNotFound)
                         throw;
                 }

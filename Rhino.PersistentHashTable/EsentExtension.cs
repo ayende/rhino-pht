@@ -10,7 +10,7 @@ namespace Rhino.PersistentHashTable
             using (var session = new Session(instance))
             {
                 JET_DBID dbid;
-                Api.JetOpenDatabase(session, database, "", out dbid, OpenDatabaseGrbit.ReadOnly);
+                Api.JetOpenDatabase(session, database, "", out dbid, OpenDatabaseGrbit.None);
                 try
                 {
                     action(session, dbid);

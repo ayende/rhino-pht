@@ -41,6 +41,39 @@ namespace Rhino.PersistentHashTable.Tests
 
         }
 
+        [Fact]
+        public void will_generate_sha256_for_new_values()
+        {
+            using (var table = new PersistentHashTable(testDatabase))
+            {
+                table.Initialize();
+
+                table.Batch(actions =>
+                {
+                    actions.Put(new PutRequest
+                    {
+                        Bytes = new byte[] { 1, 2, },
+                        Key = "test",
+                        ParentVersions = new ValueVersion[0]
+                    });
+
+
+                    actions.Commit();
+                });
+
+                table.Batch(actions =>
+                {
+                    var values = actions.Get(new GetRequest { Key = "test" });
+
+                    Assert.NotNull(values[0].Sha256Hash);
+                    Assert.NotEmpty(values[0].Sha256Hash);
+                    actions.Commit();
+                });
+            }
+
+        }
+
+		
 		[Fact]
 		public void Id_of_table_is_persistent()
 		{
@@ -112,6 +145,42 @@ namespace Rhino.PersistentHashTable.Tests
 				});
 			}
 		}
+
+        [Fact]
+        public void Can_insert_same_value_to_pht_in_two_seperate_instances()
+        {
+            using (var table = new PersistentHashTable(testDatabase))
+            {
+                table.Initialize();
+
+                table.Batch(actions =>
+                {
+                    actions.Put(new PutRequest
+                    {
+                        Key = "test",
+                        Bytes = new byte[] { 1 }
+                    });
+
+                    actions.Commit();
+                });
+            }
+
+            using (var table = new PersistentHashTable(testDatabase))
+            {
+                table.Initialize();
+
+                table.Batch(actions =>
+                {
+                    actions.Put(new PutRequest
+                    {
+                        Key = "test",
+                        Bytes = new byte[] { 1 }
+                    });
+
+                    actions.Commit();
+                });
+            }
+        }
 
 		[Fact]
 		public void Can_get_hash_from_cache()
