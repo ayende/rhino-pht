@@ -149,7 +149,10 @@ namespace Rhino.PersistentHashTable
 				Api.SetColumn(session, data, dataColumns["version_instance_id"], instanceIdForRow.ToByteArray());
 				Api.SetColumn(session, data, dataColumns["data"], request.Bytes);
 				Api.SetColumn(session, data, dataColumns["sha256_hash"], hash);
-                Api.SetColumn(session, data, dataColumns["timestamp"], DateTime.Now.ToOADate());
+			    var timestamp = DateTime.Now.ToOADate();
+                if (request.ReplicationTimeStamp.HasValue)
+                    timestamp = request.ReplicationTimeStamp.Value.ToOADate();
+                Api.SetColumn(session, data, dataColumns["timestamp"], timestamp);
 
 				if (request.ExpiresAt.HasValue)
 					Api.SetColumn(session, data, dataColumns["expiresAt"], request.ExpiresAt.Value.ToOADate());

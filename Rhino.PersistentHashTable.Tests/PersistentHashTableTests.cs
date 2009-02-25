@@ -1,79 +1,79 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
+using Rhino.PersistentHashTable.Actions;
 using Xunit;
-using System.Linq;
 
 namespace Rhino.PersistentHashTable.Tests
 {
 	public class PersistentHashTableTests : PersistentTestBase
 	{
-        [Fact]
-        public void Can_get_timestamp_from_pht()
-        {
-            using (var table = new PersistentHashTable(testDatabase))
-            {
-                table.Initialize();
+		[Fact]
+		public void Can_get_timestamp_from_pht()
+		{
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
 
-                table.Batch(actions =>
-                {
-                    actions.Put(new PutRequest
-                    {
-                        Bytes = new byte[] {1, 2,},
-                        Key = "test",
-                        ParentVersions = new ValueVersion[0]
-                    });
-
-
-                    actions.Commit();
-                });
-
-                table.Batch(actions =>
-                {
-                    var values = actions.Get(new GetRequest{Key = "test"});
-
-                    Assert.NotEqual(DateTime.MinValue, values[0].Timestamp);
-
-                    actions.Commit();
-                });
-            }
-
-        }
-
-        [Fact]
-        public void will_generate_sha256_for_new_values()
-        {
-            using (var table = new PersistentHashTable(testDatabase))
-            {
-                table.Initialize();
-
-                table.Batch(actions =>
-                {
-                    actions.Put(new PutRequest
-                    {
-                        Bytes = new byte[] { 1, 2, },
-                        Key = "test",
-                        ParentVersions = new ValueVersion[0]
-                    });
+				table.Batch(actions =>
+				{
+					actions.Put(new PutRequest
+					{
+						Bytes = new byte[] { 1, 2, },
+						Key = "test",
+						ParentVersions = new ValueVersion[0]
+					});
 
 
-                    actions.Commit();
-                });
+					actions.Commit();
+				});
 
-                table.Batch(actions =>
-                {
-                    var values = actions.Get(new GetRequest { Key = "test" });
+				table.Batch(actions =>
+				{
+					Value[] values = actions.Get(new GetRequest { Key = "test" });
 
-                    Assert.NotNull(values[0].Sha256Hash);
-                    Assert.NotEmpty(values[0].Sha256Hash);
-                    actions.Commit();
-                });
-            }
+					Assert.NotEqual(DateTime.MinValue, values[0].Timestamp);
 
-        }
+					actions.Commit();
+				});
+			}
+		}
 
-		
+		[Fact]
+		public void will_generate_sha256_for_new_values()
+		{
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
+
+				table.Batch(actions =>
+				{
+					actions.Put(new PutRequest
+					{
+						Bytes = new byte[] { 1, 2, },
+						Key = "test",
+						ParentVersions = new ValueVersion[0]
+					});
+
+
+					actions.Commit();
+				});
+
+				table.Batch(actions =>
+				{
+					Value[] values = actions.Get(new GetRequest { Key = "test" });
+
+					Assert.NotNull(values[0].Sha256Hash);
+					Assert.NotEmpty(values[0].Sha256Hash);
+					actions.Commit();
+				});
+			}
+		}
+
+
 		[Fact]
 		public void Id_of_table_is_persistent()
 		{
@@ -101,10 +101,10 @@ namespace Rhino.PersistentHashTable.Tests
 			using (var table = new PersistentHashTable(testDatabase))
 			{
 				table.Initialize();
-				var guid = Guid.NewGuid();
+				Guid guid = Guid.NewGuid();
 				table.Batch(actions =>
 				{
-					var result = actions.Put(new PutRequest
+					PutResult result = actions.Put(new PutRequest
 					{
 						Key = "test",
 						ParentVersions = new ValueVersion[0],
@@ -139,48 +139,48 @@ namespace Rhino.PersistentHashTable.Tests
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 1 }
 					});
-					var values = actions.Get(new GetRequest { Key = "test" });
+					Value[] values = actions.Get(new GetRequest { Key = "test" });
 					Assert.Equal(1, values[0].Version.Number);
 					Assert.Equal(new byte[] { 1 }, values[0].Data);
 				});
 			}
 		}
 
-        [Fact]
-        public void Can_insert_same_value_to_pht_in_two_seperate_instances()
-        {
-            using (var table = new PersistentHashTable(testDatabase))
-            {
-                table.Initialize();
+		[Fact]
+		public void Can_insert_same_value_to_pht_in_two_seperate_instances()
+		{
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
 
-                table.Batch(actions =>
-                {
-                    actions.Put(new PutRequest
-                    {
-                        Key = "test",
-                        Bytes = new byte[] { 1 }
-                    });
+				table.Batch(actions =>
+				{
+					actions.Put(new PutRequest
+					{
+						Key = "test",
+						Bytes = new byte[] { 1 }
+					});
 
-                    actions.Commit();
-                });
-            }
+					actions.Commit();
+				});
+			}
 
-            using (var table = new PersistentHashTable(testDatabase))
-            {
-                table.Initialize();
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
 
-                table.Batch(actions =>
-                {
-                    actions.Put(new PutRequest
-                    {
-                        Key = "test",
-                        Bytes = new byte[] { 1 }
-                    });
+				table.Batch(actions =>
+				{
+					actions.Put(new PutRequest
+					{
+						Key = "test",
+						Bytes = new byte[] { 1 }
+					});
 
-                    actions.Commit();
-                });
-            }
-        }
+					actions.Commit();
+				});
+			}
+		}
 
 		[Fact]
 		public void Can_get_hash_from_cache()
@@ -191,14 +191,14 @@ namespace Rhino.PersistentHashTable.Tests
 
 				table.Batch(actions =>
 				{
-					var bytes = Encoding.UTF8.GetBytes("abcdefgiklmnqrstwxyz");
+					byte[] bytes = Encoding.UTF8.GetBytes("abcdefgiklmnqrstwxyz");
 					actions.Put(new PutRequest
 					{
 						Key = "test",
 						ParentVersions = new ValueVersion[0],
 						Bytes = bytes
 					});
-					var values = actions.Get(new GetRequest
+					Value[] values = actions.Get(new GetRequest
 					{
 						Key = "test"
 					});
@@ -255,7 +255,7 @@ namespace Rhino.PersistentHashTable.Tests
 
 				table.Batch(actions =>
 				{
-					var removed = actions.Remove(new RemoveRequest
+					bool removed = actions.Remove(new RemoveRequest
 					{
 						Key = "a",
 						ParentVersions = new[] { versionOfA }
@@ -269,8 +269,6 @@ namespace Rhino.PersistentHashTable.Tests
 					Assert.True(removed);
 					actions.Commit();
 				});
-
-
 			}
 		}
 
@@ -283,7 +281,7 @@ namespace Rhino.PersistentHashTable.Tests
 
 				table.Batch(actions =>
 				{
-					var version1 = actions.Put(new PutRequest
+					PutResult version1 = actions.Put(new PutRequest
 					{
 						Key = "test",
 						ParentVersions = new ValueVersion[0],
@@ -295,7 +293,7 @@ namespace Rhino.PersistentHashTable.Tests
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 2 }
 					});
-					var value = actions.Get(new GetRequest
+					Value[] value = actions.Get(new GetRequest
 					{
 						Key = "test",
 						SpecifiedVersion = version1.Version
@@ -314,19 +312,19 @@ namespace Rhino.PersistentHashTable.Tests
 
 				table.Batch(actions =>
 				{
-					var version1 = actions.Put(new PutRequest
+					PutResult version1 = actions.Put(new PutRequest
 					{
 						Key = "test",
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 1 }
 					});
-					var version2 = actions.Put(new PutRequest
+					PutResult version2 = actions.Put(new PutRequest
 					{
 						Key = "test",
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 2 }
 					});
-					var value = actions.Get(new GetRequest
+					Value[] value = actions.Get(new GetRequest
 					{
 						Key = "test",
 						SpecifiedVersion = version1.Version
@@ -337,10 +335,10 @@ namespace Rhino.PersistentHashTable.Tests
 					{
 						Key = "test",
 						ParentVersions = new[]
-                    {
-                        version1.Version,
-                        version2.Version
-                    },
+                        {
+                            version1.Version,
+                            version2.Version
+                        },
 						Bytes = new byte[] { 3 }
 					});
 
@@ -370,7 +368,7 @@ namespace Rhino.PersistentHashTable.Tests
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 1 }
 					});
-					var put = actions.Put(new PutRequest
+					PutResult put = actions.Put(new PutRequest
 					{
 						Key = "test",
 						ParentVersions = new ValueVersion[0],
@@ -411,7 +409,7 @@ namespace Rhino.PersistentHashTable.Tests
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 2 }
 					});
-					var values = actions.Get(new GetRequest
+					Value[] values = actions.Get(new GetRequest
 					{
 						Key = "test"
 					});
@@ -435,19 +433,19 @@ namespace Rhino.PersistentHashTable.Tests
 
 				table.Batch(actions =>
 				{
-					var put1 = actions.Put(new PutRequest
+					PutResult put1 = actions.Put(new PutRequest
 					{
 						Key = "test",
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 1 }
 					});
-					var put2 = actions.Put(new PutRequest
+					PutResult put2 = actions.Put(new PutRequest
 					{
 						Key = "test",
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 1 }
 					});
-					var values = actions.Get(new GetRequest { Key = "test" });
+					Value[] values = actions.Get(new GetRequest { Key = "test" });
 					Assert.Equal(1, values.Length);
 					Assert.Equal(put1.Version.Number, put2.Version.Number);
 					Assert.Equal(put1.Version.InstanceId, put2.Version.InstanceId);
@@ -464,19 +462,19 @@ namespace Rhino.PersistentHashTable.Tests
 
 				table.Batch(actions =>
 				{
-					var version1 = actions.Put(new PutRequest
+					PutResult version1 = actions.Put(new PutRequest
 					{
 						Key = "test",
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 1 }
 					});
-					var version2 = actions.Put(new PutRequest
+					PutResult version2 = actions.Put(new PutRequest
 					{
 						Key = "test",
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 2 }
 					});
-					var values = actions.Get(new GetRequest { Key = "test" });
+					Value[] values = actions.Get(new GetRequest { Key = "test" });
 					Assert.Equal(2, values.Length);
 					actions.Put(new PutRequest
 					{
@@ -485,7 +483,7 @@ namespace Rhino.PersistentHashTable.Tests
 						Bytes = new byte[] { 3 }
 					});
 
-					values = actions.Get(new GetRequest{ Key = "test"});
+					values = actions.Get(new GetRequest { Key = "test" });
 					Assert.Equal(1, values.Length);
 					Assert.Equal(new byte[] { 3 }, values[0].Data);
 					Assert.Equal(3, values[0].Version.Number);
@@ -508,7 +506,7 @@ namespace Rhino.PersistentHashTable.Tests
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 1 }
 					});
-					var values = actions.Get(new GetRequest { Key = "abc10" });
+					Value[] values = actions.Get(new GetRequest { Key = "abc10" });
 					Assert.Equal(0, values.Length);
 
 					values = actions.Get(new GetRequest { Key = "abc1" });
@@ -528,13 +526,13 @@ namespace Rhino.PersistentHashTable.Tests
 				{
 					actions.Put(new PutRequest
 					{
-						Key= "abc1", 
-						ParentVersions = new ValueVersion[0], 
-						Bytes=new byte[] { 1 }, 
+						Key = "abc1",
+						ParentVersions = new ValueVersion[0],
+						Bytes = new byte[] { 1 },
 						ExpiresAt = DateTime.Now.AddYears(1)
 					});
 
-					var values = actions.Get(new GetRequest { Key = "abc1" });
+					Value[] values = actions.Get(new GetRequest { Key = "abc1" });
 					Assert.NotEqual(0, values.Length);
 				});
 			}
@@ -549,7 +547,7 @@ namespace Rhino.PersistentHashTable.Tests
 
 				table.Batch(actions =>
 				{
-					var version1 = actions.Put(new PutRequest
+					PutResult version1 = actions.Put(new PutRequest
 					{
 						Key = "abc1",
 						ParentVersions = new ValueVersion[0],
@@ -559,30 +557,30 @@ namespace Rhino.PersistentHashTable.Tests
 					actions.Put(new PutRequest
 					{
 						Key = "abc1",
-						ParentVersions  = new[] { version1.Version },
+						ParentVersions = new[] { version1.Version },
 						Bytes = new byte[] { 1 }
 					});
 					actions.Put(new PutRequest
 					{
 						Key = "abc1",
 						ParentVersions = new[] { version1.Version },
-						Bytes= new byte[] { 2 }
+						Bytes = new byte[] { 2 }
 					});
 					actions.Put(new PutRequest
 					{
 						Key = "abc1",
-						ParentVersions = new []
-						{
-							new ValueVersion
-							{
-								InstanceId = version1.Version.InstanceId,
-								Number = 3
-							},
-						},
+						ParentVersions = new[]
+                        {
+                            new ValueVersion
+                            {
+                                InstanceId = version1.Version.InstanceId,
+                                Number = 3
+                            },
+                        },
 						Bytes = new byte[] { 3 }
 					});
 
-					var values = actions.Get(new GetRequest { Key = "abc1" });
+					Value[] values = actions.Get(new GetRequest { Key = "abc1" });
 					Assert.Equal(3, values.Length);
 
 					Assert.Equal(new[] { 1 }, values[0].ParentVersions.Select(x => x.Number).ToArray());
@@ -606,10 +604,10 @@ namespace Rhino.PersistentHashTable.Tests
 						Key = "abc1",
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 1 },
-						ExpiresAt= DateTime.Now.AddYears(-1),
+						ExpiresAt = DateTime.Now.AddYears(-1),
 						OptimisticConcurrency = false
 					});
-					var values = actions.Get(new GetRequest { Key = "abc1" });
+					Value[] values = actions.Get(new GetRequest { Key = "abc1" });
 
 					Assert.Equal(0, values.Length);
 				});
@@ -630,7 +628,7 @@ namespace Rhino.PersistentHashTable.Tests
 						Key = "abc1",
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 1 },
-						ExpiresAt =  DateTime.Now,
+						ExpiresAt = DateTime.Now,
 					});
 
 					actions.Commit();
@@ -641,11 +639,131 @@ namespace Rhino.PersistentHashTable.Tests
 				int numRecords = -1;
 				table.Batch(actions =>
 				{
-					Api.JetSetCurrentIndex(actions.Session, actions.Keys, null);//primary
+					Api.JetSetCurrentIndex(actions.Session, actions.Keys, null); //primary
 					Api.JetIndexRecordCount(actions.Session, actions.Keys, out numRecords, 0);
 				});
 
 				Assert.Equal(0, numRecords);
+			}
+		}
+
+		[Fact]
+		public void ExportToCsv_exports_database_table_contents_to_csv_file_to_specified_path()
+		{
+			var dbRootPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, testDatabase);
+			var dbFilePath = Path.Combine(dbRootPath, Path.GetFileName(testDatabase));
+			var exportPath = Path.Combine(dbRootPath, "export");
+
+			//Clear previous test results.
+			if (Directory.Exists(exportPath))
+				Directory.Delete(exportPath);
+			Directory.CreateDirectory(exportPath);
+
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
+				table.Batch(actions =>
+				{
+					actions.Put(new PutRequest
+					{
+						Key = "abc1",
+						Bytes = new byte[] { 1 }
+					});
+					actions.Put(new PutRequest
+					{
+						Key = "abc2",
+						Bytes = new byte[] { 2 }
+					});
+					actions.Commit();
+				});
+			}
+
+			var export = new ExportToCsv(dbFilePath, exportPath);
+			export.Execute();
+
+			Assert.True(Directory.Exists(exportPath));
+			Assert.True(File.Exists(Path.Combine(exportPath, "keys.csv")));
+			Assert.True(File.Exists(Path.Combine(exportPath, "data.csv")));
+			Assert.True(File.Exists(Path.Combine(exportPath, "details.csv")));
+			Assert.True(File.Exists(Path.Combine(exportPath, "lists.csv")));
+
+			var linesInKeys = File.ReadAllLines(Path.Combine(exportPath, "keys.csv"));
+			var linesInData = File.ReadAllLines(Path.Combine(exportPath, "data.csv"));
+			Assert.True(linesInKeys.Length > 0);
+			Assert.True(linesInData.Length > 0);
+		}
+
+		[Fact]
+		public void ExpireDataFromPhtByTimestamp_removes_data_whose_expiration_is_lesser_or_equal_than_specified()
+		{
+			var dbRootPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, testDatabase);
+			var dbFilePath = Path.Combine(dbRootPath, Path.GetFileName(testDatabase));
+
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
+				table.Batch(actions =>
+				{
+					actions.Put(new PutRequest
+					{
+						Key = "expire1",
+						Bytes = new byte[] { 1 },
+						ReplicationTimeStamp = DateTime.Now.AddHours(-1)
+					});
+					var parent = actions.Put(new PutRequest
+					{
+						Key = "expire2",
+						Bytes = new byte[] { 2 },
+						ReplicationTimeStamp = DateTime.Now.AddMinutes(-20)
+					});
+
+					actions.Put(new PutRequest
+					{
+						Key = "expire2",
+						Bytes = new byte[] { 2, 1 },
+						ParentVersions = new[] { parent.Version },
+						ReplicationTimeStamp = DateTime.Now.AddMinutes(-10)
+					});
+					actions.Put(new PutRequest
+					{
+						Key = "shouldnotexpire",
+						Bytes = new byte[] { 3 },
+						ReplicationTimeStamp = DateTime.Now.AddMinutes(30)
+					});
+					actions.Commit();
+				});
+			}
+
+			var expiryUtil = new ExpireDataFromPhtByTimestamp(dbFilePath, DateTime.Now);
+			expiryUtil.Excute();
+
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
+
+				table.Batch(actions =>
+				{
+					var results1 = actions.Get(new GetRequest
+					{
+						Key = "expire1",
+						SpecifiedVersion = null
+					});
+					Assert.True(results1.Length == 0);
+
+					var results2 = actions.Get(new GetRequest
+					{
+						Key = "expire2",
+						SpecifiedVersion = null
+					});
+					Assert.True(results2.Length == 0);
+
+					var results3 = actions.Get(new GetRequest
+					{
+						Key = "shouldnotexpire",
+						SpecifiedVersion = null
+					});
+					Assert.True(results3.Length > 0);
+				});
 			}
 		}
 
@@ -664,7 +782,6 @@ namespace Rhino.PersistentHashTable.Tests
 						ParentVersions = new ValueVersion[0],
 						Bytes = new byte[] { 1 }
 					});
-						
 
 
 					table.Batch(actions2 =>
