@@ -57,6 +57,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CleanupTests.cs" />
     <Compile Include="PersistentHashTableTests.cs" />
     <Compile Include="PersistentListTests.cs" />
     <Compile Include="PersistentTestBase.cs" />

@@ -1,12 +1,14 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Web;
 using Microsoft.Isam.Esent.Interop;
+using System.Diagnostics;
 
 namespace Rhino.PersistentHashTable
 {
-    public class PersistentHashTable : IDisposable
+    public class PersistentHashTable : CriticalFinalizerObject, IDisposable
     {
         private readonly Instance instance;
         private bool needToDisposeInstance;
@@ -42,9 +44,7 @@ namespace Rhino.PersistentHashTable
             }
             catch (Exception e)
             {
-                if (needToDisposeInstance)
-                    instance.Dispose();
-                needToDisposeInstance = false;
+                Dispose();
                 throw new InvalidOperationException("Could not open cache: " + database, e);
             }
         }
@@ -134,6 +134,31 @@ namespace Rhino.PersistentHashTable
             {
                 instance.Dispose();
             }
+            needToDisposeInstance = false;
+            GC.SuppressFinalize(this);
+        }
+
+        ~PersistentHashTable()
+        {
+            if (needToDisposeInstance)
+            {
+                try
+                {
+                    Trace.WriteLine("Disposing esent resources from finalizer! You should call PersistentHashTable.Dispose() instead!");
+                    instance.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    try
+                    {
+                        Trace.WriteLine("Failed to dispose esent instance from finalizer because: " + exception);
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+            needToDisposeInstance = false;
         }
 
         public void Batch(Action<PersistentHashTableActions> action)
