@@ -60,7 +60,7 @@ namespace Rhino.PersistentHashTable
 			get { return dataColumns; }
 		}
 
-		public PersistentHashTableActions(Instance instance, string database, Cache cache, Guid instanceId)
+		public PersistentHashTableActions(JET_INSTANCE instance, string database, Cache cache, Guid instanceId)
 		{
 			this.cache = cache;
 			this.instanceId = instanceId;
@@ -351,7 +351,7 @@ namespace Rhino.PersistentHashTable
 
 		private string GetKey(string key)
 		{
-			return "rhino.dht [" + instanceId + "]: " + key;
+			return "rhino.pht [" + instanceId + "]: " + key;
 		}
 
 		public void Commit()

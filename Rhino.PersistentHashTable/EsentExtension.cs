@@ -5,7 +5,7 @@ namespace Rhino.PersistentHashTable
 {
     public static class EsentExtension
     {
-        public static void WithDatabase(this Instance instance, string database, Action<Session, JET_DBID> action)
+        public static void WithDatabase(this JET_INSTANCE instance, string database, Action<Session, JET_DBID> action)
         {
             using (var session = new Session(instance))
             {
