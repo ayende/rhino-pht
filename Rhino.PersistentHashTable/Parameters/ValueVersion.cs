@@ -4,7 +4,16 @@ namespace Rhino.PersistentHashTable
 {
     public class ValueVersion : IComparable<ValueVersion>
     {
+		/// <summary>
+		/// Gets or sets the instance id for this version
+		/// </summary>
+		/// <value>The instance id.</value>
         public Guid InstanceId { get; set; }
+
+		/// <summary>
+		/// Gets or sets the number of this version.
+		/// </summary>
+		/// <value>The number.</value>
         public int Number { get; set; }
 
 

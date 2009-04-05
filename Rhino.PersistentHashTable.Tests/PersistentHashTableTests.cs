@@ -551,7 +551,7 @@ namespace Rhino.PersistentHashTable.Tests
 					{
 						Key = "abc1",
 						ParentVersions = new ValueVersion[0],
-						Bytes = new byte[] { 1 }
+						Bytes = new byte[] { 6 }
 					});
 
 					actions.Put(new PutRequest
@@ -591,6 +591,36 @@ namespace Rhino.PersistentHashTable.Tests
 		}
 
 		[Fact]
+		public void When_setting_the_same_value_on_the_key_twice_will_not_create_new_version()
+		{
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
+
+				table.Batch(actions =>
+				{
+					PutResult version1 = actions.Put(new PutRequest
+					{
+						Key = "abc1",
+						ParentVersions = new ValueVersion[0],
+						Bytes = new byte[] { 6 }
+					});
+
+					var version2 = actions.Put(new PutRequest
+					{
+						Key = "abc1",
+						ParentVersions = new[] { version1.Version },
+						Bytes = new byte[] { 6 }
+					});
+
+					Assert.False(version2.ConflictExists);
+					Assert.Equal(version1.Version.InstanceId, version2.Version.InstanceId);
+					Assert.Equal(version1.Version.Number, version2.Version.Number);
+				});
+			}
+		}
+
+		[Fact]
 		public void After_item_expires_it_cannot_be_retrieved()
 		{
 			using (var table = new PersistentHashTable(testDatabase))
@@ -610,6 +640,67 @@ namespace Rhino.PersistentHashTable.Tests
 					Value[] values = actions.Get(new GetRequest { Key = "abc1" });
 
 					Assert.Equal(0, values.Length);
+				});
+			}
+		}
+
+		[Fact]
+		public void Can_put_a_value_as_read_only()
+		{
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
+
+				table.Batch(actions =>
+				{
+					actions.Put(new PutRequest
+					{
+						Key = "abc1",
+						ParentVersions = new ValueVersion[0],
+						Bytes = new byte[] { 1 },
+						OptimisticConcurrency = false,
+                        IsReadOnly = true
+					});
+					Value[] values = actions.Get(new GetRequest { Key = "abc1" });
+
+					Assert.True(values[0].ReadOnly);
+				});
+			}
+		}
+
+		[Fact]
+		public void Can_overwrite_a_read_only_with_no_conflicts()
+		{
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
+
+				table.Batch(actions =>
+				{
+					actions.Put(new PutRequest
+					{
+						Key = "abc1",
+						ParentVersions = new ValueVersion[0],
+						Bytes = new byte[] { 1 },
+						OptimisticConcurrency = false,
+						IsReadOnly = true
+					});
+
+					var result = actions.Put(new PutRequest
+					{
+						Key = "abc1",
+						ParentVersions = new ValueVersion[0],
+						Bytes = new byte[] { 2 },
+						OptimisticConcurrency = false,
+						IsReadOnly = true
+					});
+					Assert.False(result.ConflictExists);
+
+					Value[] values = actions.Get(new GetRequest { Key = "abc1" });
+
+					Assert.True(values[0].ReadOnly);
+					Assert.Equal(1, values.Length);
+					Assert.Equal(new byte[]{2}, values[0].Data);
 				});
 			}
 		}

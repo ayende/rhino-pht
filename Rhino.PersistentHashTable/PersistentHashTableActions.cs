@@ -80,32 +80,38 @@ namespace Rhino.PersistentHashTable
 
 		public PutResult Put(PutRequest request)
 		{
-			var doesAllVersionsMatch = DoesAllVersionsMatch(request.Key, request.ParentVersions);
-
 			var hash = GetSha256Hash(request);
-			if (doesAllVersionsMatch == false)
+			var versions = GatherActiveVersions(request.Key);
+			if (versions.Length == 1)
 			{
-				var versions = GatherActiveVersions(request.Key);
-				if (versions.Length == 1)
-				{
-					var values = Get(new GetRequest{Key = request.Key, SpecifiedVersion = versions[0]});
-					if(values.Length==1 && 
-						values[0].Sha256Hash.SequenceEqual(hash))
-					{
-						return new PutResult
-						{
-							Version = versions[0]
-						};
-					}
-				}
-				if (request.OptimisticConcurrency)
+				// Test that the key doesn't already exist with matching value
+				var values = Get(new GetRequest { Key = request.Key, SpecifiedVersion = versions[0] });
+				if (values.Length == 1 && values[0].Sha256Hash.SequenceEqual(hash))
 				{
 					return new PutResult
 					{
-						ConflictExists = true,
-						Version = null
+						ConflictExists = false,
+						Version = versions[0]
 					};
 				}
+			}
+
+			// we always accept read only put requests, because
+			// we assume that there can never be a conflict with them
+			// since they are read only values.
+			var doesAllVersionsMatch = 
+				request.IsReadOnly ? 
+				request.IsReadOnly : 
+				DoesAllVersionsMatch(request.Key, request.ParentVersions);
+			
+			if (doesAllVersionsMatch == false &&
+				request.OptimisticConcurrency)
+			{
+				return new PutResult
+				{
+					ConflictExists = true,
+					Version = null
+				};
 			}
 
 			// always remove the active versions from the cache
@@ -114,12 +120,12 @@ namespace Rhino.PersistentHashTable
 			{
 				// we only remove existing versions from the 
 				// cache if we delete them from the database
-				foreach (var parentVersion in request.ParentVersions)
+				foreach (var parentVersion in versions)
 				{
 					var copy = parentVersion;
 					commitSyncronization.Add(() => cache.Remove(GetKey(request.Key, copy)));
 				}
-				DeleteAllKeyValuesForVersions(request.Key, request.ParentVersions);
+				DeleteAllKeyValuesForVersions(request.Key, versions);
 			}
 
 			var instanceIdForRow = instanceId;
@@ -149,7 +155,9 @@ namespace Rhino.PersistentHashTable
 				Api.SetColumn(session, data, dataColumns["version_instance_id"], instanceIdForRow.ToByteArray());
 				Api.SetColumn(session, data, dataColumns["data"], request.Bytes);
 				Api.SetColumn(session, data, dataColumns["sha256_hash"], hash);
-			    var timestamp = DateTime.Now.ToOADate();
+				Api.SetColumn(session, data, dataColumns["readonly"], request.IsReadOnly);
+
+				var timestamp = DateTime.Now.ToOADate();
                 if (request.ReplicationTimeStamp.HasValue)
                     timestamp = request.ReplicationTimeStamp.Value.ToOADate();
                 Api.SetColumn(session, data, dataColumns["timestamp"], timestamp);
@@ -310,6 +318,7 @@ namespace Rhino.PersistentHashTable
 				ParentVersions = GetParentVersions(),
 				Data = Api.RetrieveColumn(session, data, dataColumns["data"]),
 				Sha256Hash = Api.RetrieveColumn(session, data, dataColumns["sha256_hash"]),
+				ReadOnly = Api.RetrieveColumnAsBoolean(session, data, dataColumns["readonly"]).Value,
 				ExpiresAt = expiresAt
 			};
 		}

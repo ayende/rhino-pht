@@ -8,7 +8,7 @@ namespace Rhino.PersistentHashTable
 	public class SchemaCreator
     {
         private readonly Session session;
-		public const string SchemaVersion = "1.5";
+		public const string SchemaVersion = "1.6";
 
 		public SchemaCreator(Session session)
         {
@@ -143,11 +143,11 @@ namespace Rhino.PersistentHashTable
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
             }, null, 0, out columnid);
 
-            Api.JetAddColumn(session, tableid, "expiresAt", new JET_COLUMNDEF
-            {
-                coltyp = JET_coltyp.DateTime,
-                grbit = ColumndefGrbit.ColumnFixed
-            }, null, 0, out columnid);
+			Api.JetAddColumn(session, tableid, "expiresAt", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.DateTime,
+				grbit = ColumndefGrbit.ColumnFixed
+			}, null, 0, out columnid);
 
             var indexDef = "+key\0+version_number\0+version_instance_id\0\0";
             Api.JetCreateIndex(session, tableid, "pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
@@ -210,9 +210,15 @@ namespace Rhino.PersistentHashTable
             Api.JetAddColumn(session, tableid, "sha256_hash", new JET_COLUMNDEF
             {
                 coltyp = JET_coltyp.Binary,
-                grbit = ColumndefGrbit.ColumnFixed,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
                 cbMax = 32
             }, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "readonly", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Bit,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "parentVersions", new JET_COLUMNDEF
             {

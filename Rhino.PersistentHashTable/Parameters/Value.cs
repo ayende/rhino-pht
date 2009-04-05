@@ -7,6 +7,7 @@ namespace Rhino.PersistentHashTable
         public DateTime? ExpiresAt { get; set; }
         public DateTime Timestamp { get; set; }
         public string Key { get; set; }
+		public bool ReadOnly { get; set; }
         public ValueVersion Version { get; set; }
         public ValueVersion[] ParentVersions { get; set; }
         public byte[] Data { get; set; }
