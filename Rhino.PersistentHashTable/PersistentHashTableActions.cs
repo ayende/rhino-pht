@@ -380,15 +380,24 @@ namespace Rhino.PersistentHashTable
 
 			if (Api.TrySeek(session, keys, SeekGrbit.SeekLT) == false)
 				return;
-
+			var count = 0;
 			do
 			{
+
 				var key = Api.RetrieveColumnAsString(session, keys, keysColumns["key"], Encoding.Unicode);
 				var version = ReadVersion();
 
 				Api.JetDelete(session, keys);
 
 				ApplyToKeyAndActiveVersions(data, new[] { version }, key, v => Api.JetDelete(session, data));
+
+				count += 1;
+				// We need to break the unbounded result set here, because there may be many
+				// rows that are not valid, so we break after a hundred or so making sure that 
+				// the commit size doesn't get too big.	This will get cleaned up by the next
+				// commit any way.
+				if(count> 100)
+					break;
 
 			} while (Api.TryMovePrevious(session, keys));
 		}
