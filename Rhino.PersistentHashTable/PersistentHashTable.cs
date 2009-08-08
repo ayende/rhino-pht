@@ -16,7 +16,9 @@ namespace Rhino.PersistentHashTable
 
         public Guid Id { get; private set; }
 
-        public PersistentHashTable(string database)
+    	public event Action<InstanceParameters> CustomConfiguration = delegate { };
+
+    	public PersistentHashTable(string database)
         {
             this.database = database;
             path = database;
@@ -46,18 +48,19 @@ namespace Rhino.PersistentHashTable
 
         private void ConfigureInstance(JET_INSTANCE jetInstance)
         {
-            new InstanceParameters(jetInstance)
-            {
-                CircularLog = true,
-                Recovery = true,
-                CreatePathIfNotExist = true,
-                TempDirectory = Path.Combine(path, "temp"),
-                SystemDirectory = Path.Combine(path, "system"),
-                LogFileDirectory = Path.Combine(path, "logs")
-            };
+        	var parameters = new InstanceParameters(jetInstance)
+        	{
+        		CircularLog = true,
+        		Recovery = true,
+        		CreatePathIfNotExist = true,
+        		TempDirectory = Path.Combine(path, "temp"),
+        		SystemDirectory = Path.Combine(path, "system"),
+        		LogFileDirectory = Path.Combine(path, "logs")
+        	};
+        	CustomConfiguration(parameters);
         }
 
-        private void SetIdFromDb()
+    	private void SetIdFromDb()
         {
             try
             {
