@@ -18,10 +18,10 @@ namespace Rhino.PersistentHashTable
 		private readonly Table identity;
 		private readonly Guid instanceId;
 		private readonly JET_DBID dbid;
-		private readonly Dictionary<string, JET_COLUMNID> keysColumns;
-		private readonly Dictionary<string, JET_COLUMNID> dataColumns;
-		private readonly Dictionary<string, JET_COLUMNID> identityColumns;
-		private readonly Dictionary<string, JET_COLUMNID> listColumns;
+		private readonly IDictionary<string, JET_COLUMNID> keysColumns;
+		private readonly IDictionary<string, JET_COLUMNID> dataColumns;
+		private readonly IDictionary<string, JET_COLUMNID> identityColumns;
+		private readonly IDictionary<string, JET_COLUMNID> listColumns;
 		private readonly Cache cache;
 		private readonly List<Action> commitSyncronization = new List<Action>();
 
@@ -50,12 +50,12 @@ namespace Rhino.PersistentHashTable
 			get { return data; }
 		}
 
-		public Dictionary<string, JET_COLUMNID> KeysColumns
+		public IDictionary<string, JET_COLUMNID> KeysColumns
 		{
 			get { return keysColumns; }
 		}
 
-		public Dictionary<string, JET_COLUMNID> DataColumns
+		public IDictionary<string, JET_COLUMNID> DataColumns
 		{
 			get { return dataColumns; }
 		}
@@ -196,12 +196,12 @@ namespace Rhino.PersistentHashTable
         // delete from identity where id = @new_identity
 		private int GenerateVersionNumber()
 		{
-			var bookmark = new byte[Api.BookmarkMost];
+            var bookmark = new byte[SystemParameters.BookmarkMost];
 			int bookmarkSize;
 			using (var update = new Update(session, identity, JET_prep.Insert))
 			{
 				// force identity generator
-				update.Save(bookmark, Api.BookmarkMost, out bookmarkSize);
+				update.Save(bookmark, SystemParameters.BookmarkMost, out bookmarkSize);
 			}
 			Api.JetGotoBookmark(session, identity, bookmark, bookmarkSize);
 			var version = Api.RetrieveColumnAsInt32(session, identity, identityColumns["id"]);
@@ -515,7 +515,7 @@ namespace Rhino.PersistentHashTable
 
 		public int AddItem(AddItemRequest request)
 		{
-			byte[] bookmark = new byte[Api.BookmarkMost];
+            byte[] bookmark = new byte[SystemParameters.BookmarkMost];
 			int actualBookmarkSize;
 			using (var update = new Update(Session, list, JET_prep.Insert))
 			{

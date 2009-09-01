@@ -33,7 +33,7 @@
   <ItemGroup>
     <Reference Include="Esent.Interop, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\SharedLibs\Esent\Esent.Interop.dll</HintPath>
+      <HintPath>..\SharedLibs\Esent.Interop.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
@@ -53,7 +53,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="xunit, Version=1.1.0.1323, Culture=neutral, PublicKeyToken=8d05b1bb7a6fdb6c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\SharedLibs\xUnit\xunit.dll</HintPath>
+      <HintPath>..\SharedLibs\xunit.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
