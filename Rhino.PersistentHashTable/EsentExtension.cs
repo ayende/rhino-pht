@@ -3,7 +3,8 @@ using Microsoft.Isam.Esent.Interop;
 
 namespace Rhino.PersistentHashTable
 {
-    public static class EsentExtension
+	[CLSCompliant(false)]
+	public static class EsentExtension
     {
         public static void WithDatabase(this JET_INSTANCE instance, string database, Action<Session, JET_DBID> action)
         {

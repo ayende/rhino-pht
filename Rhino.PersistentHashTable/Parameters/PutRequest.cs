@@ -2,7 +2,7 @@ using System;
 
 namespace Rhino.PersistentHashTable
 {
-    public class PutRequest
+	public class PutRequest
     {
 		private ValueVersion[] parentVersions;
 
@@ -71,5 +71,11 @@ namespace Rhino.PersistentHashTable
 		/// 	<c>true</c> if this value should be treated as read only; otherwise, <c>false</c>.
 		/// </value>
 		public bool IsReadOnly { get; set; }
+
+		/// <summary>
+		/// Tag is a user specified value that allow the user to perform efficent searchs 
+		/// on top of the Key/Value interface that we expose
+		/// </summary>
+		public int? Tag { get; set; }
     }
 }

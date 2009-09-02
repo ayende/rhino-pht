@@ -16,9 +16,7 @@ namespace Rhino.PersistentHashTable
 
         public Guid Id { get; private set; }
 
-    	public event Action<InstanceParameters> CustomConfiguration = delegate { };
-
-    	public PersistentHashTable(string database)
+        public PersistentHashTable(string database)
         {
             this.database = database;
             path = database;
@@ -55,9 +53,9 @@ namespace Rhino.PersistentHashTable
         		CreatePathIfNotExist = true,
         		TempDirectory = Path.Combine(path, "temp"),
         		SystemDirectory = Path.Combine(path, "system"),
-        		LogFileDirectory = Path.Combine(path, "logs")
+        		LogFileDirectory = Path.Combine(path, "logs"),
+                MaxVerPages = 8192
         	};
-        	CustomConfiguration(parameters);
         }
 
     	private void SetIdFromDb()
@@ -132,7 +130,7 @@ namespace Rhino.PersistentHashTable
         public void Dispose()
         {
             GC.SuppressFinalize(this);
-            Api.JetTerm(instance);
+        	Api.JetTerm2(instance, TermGrbit.Abrupt);
         }
 
         ~PersistentHashTable()
@@ -155,6 +153,7 @@ namespace Rhino.PersistentHashTable
             }
         }
 
+		[CLSCompliant(false)]
         public void Batch(Action<PersistentHashTableActions> action)
         {
             using (var pht = new PersistentHashTableActions(instance, database, HttpRuntime.Cache, Id))

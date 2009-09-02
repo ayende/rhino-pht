@@ -2,6 +2,7 @@ using System;
 
 namespace Rhino.PersistentHashTable
 {
+	[Serializable]
     public class ValueVersion : IComparable<ValueVersion>
     {
 		/// <summary>

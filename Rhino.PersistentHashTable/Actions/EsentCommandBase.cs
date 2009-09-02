@@ -4,7 +4,8 @@ using Microsoft.Isam.Esent.Interop;
 
 namespace Rhino.PersistentHashTable.Actions
 {
-    public class EsentCommandBase
+	[CLSCompliant(false)]
+	public class EsentCommandBase
     {
         protected string databasePath;
 

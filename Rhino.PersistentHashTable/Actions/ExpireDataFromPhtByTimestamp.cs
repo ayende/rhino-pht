@@ -4,7 +4,8 @@ using Microsoft.Isam.Esent.Interop;
 
 namespace Rhino.PersistentHashTable.Actions
 {
-    public class ExpireDataFromPhtByTimestamp : EsentCommandBase
+	[CLSCompliant(false)]
+	public class ExpireDataFromPhtByTimestamp : EsentCommandBase
     {
         readonly DateTime lastDate;
 

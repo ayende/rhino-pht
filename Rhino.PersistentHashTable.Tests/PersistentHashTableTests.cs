@@ -43,6 +43,37 @@ namespace Rhino.PersistentHashTable.Tests
 		}
 
 		[Fact]
+		public void Can_remove_without_version()
+		{
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
+
+				table.Batch(actions =>
+				{
+					actions.Put(new PutRequest
+					{
+						Bytes = new byte[] { 1, 2, },
+						Key = "test",
+						ParentVersions = new ValueVersion[0]
+					});
+
+
+					actions.Commit();
+				});
+
+				table.Batch(actions =>
+				{
+					actions.Remove(new RemoveRequest { Key = "test" });
+					Value[] values = actions.Get(new GetRequest { Key = "test" });
+
+					Assert.Empty(values);
+					actions.Commit();
+				});
+			}
+		}
+
+		[Fact]
 		public void will_generate_sha256_for_new_values()
 		{
 			using (var table = new PersistentHashTable(testDatabase))
@@ -258,13 +289,13 @@ namespace Rhino.PersistentHashTable.Tests
 					bool removed = actions.Remove(new RemoveRequest
 					{
 						Key = "a",
-						ParentVersions = new[] { versionOfA }
+						SpecificVersion = versionOfA 
 					});
 					Assert.True(removed);
 					removed = actions.Remove(new RemoveRequest
 					{
 						Key = "c",
-						ParentVersions = new[] { versionOfC }
+						SpecificVersion = versionOfC 
 					});
 					Assert.True(removed);
 					actions.Commit();

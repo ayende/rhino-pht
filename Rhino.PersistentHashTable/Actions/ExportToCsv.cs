@@ -7,7 +7,8 @@ using Microsoft.Isam.Esent.Interop;
 
 namespace Rhino.PersistentHashTable.Actions
 {
-    public class ExportToCsv : EsentCommandBase
+	[CLSCompliant(false)]
+	public class ExportToCsv : EsentCommandBase
     {
         const char quote = '"';
         const string comma = ",";

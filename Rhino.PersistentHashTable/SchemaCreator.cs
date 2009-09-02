@@ -5,10 +5,11 @@ namespace Rhino.PersistentHashTable
 	using System;
 	using System.Text;
 
+	[CLSCompliant(false)]
 	public class SchemaCreator
     {
         private readonly Session session;
-		public const string SchemaVersion = "1.6";
+		public const string SchemaVersion = "1.7";
 
 		public SchemaCreator(Session session)
         {
@@ -28,7 +29,9 @@ namespace Rhino.PersistentHashTable
                     CreateKeysTable(dbid);
                     CreateDataTable(dbid);
                     CreateListTable(dbid);
-
+					CreateReplicationInfoTable(dbid);
+                	CreateReplicationRemovalTable(dbid);
+                    
                     tx.Commit(CommitTransactionGrbit.None);
                 }
             }
@@ -143,6 +146,12 @@ namespace Rhino.PersistentHashTable
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
             }, null, 0, out columnid);
 
+			Api.JetAddColumn(session, tableid, "tag", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed
+			}, null, 0, out columnid);
+
 			Api.JetAddColumn(session, tableid, "expiresAt", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.DateTime,
@@ -157,10 +166,101 @@ namespace Rhino.PersistentHashTable
             Api.JetCreateIndex(session, tableid, "by_key", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
                                100);
 
+			indexDef = "+tag\0\0";
+			Api.JetCreateIndex(session, tableid, "by_tag", CreateIndexGrbit.IndexIgnoreAnyNull, indexDef, indexDef.Length,
+							   100);
+
             indexDef = "+expiresAt\0\0";
             Api.JetCreateIndex(session, tableid, "by_expiry", CreateIndexGrbit.IndexIgnoreAnyNull, indexDef, indexDef.Length,
                                100);
         }
+
+		private void CreateReplicationRemovalTable(JET_DBID dbid)
+		{
+			JET_TABLEID tableid;
+			Api.JetCreateTable(session, dbid, "replication_removal_info", 16, 100, out tableid);
+			JET_COLUMNID columnid;
+
+			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+			{
+				cbMax = 255,
+				coltyp = JET_coltyp.Text,
+				cp = JET_CP.Unicode,
+				grbit = ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "version_instance_id", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Binary,
+                cbMax = 16,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+            Api.JetAddColumn(session, tableid, "version_number", new JET_COLUMNDEF
+            {
+                coltyp = JET_coltyp.Long,
+                grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+            }, null, 0, out columnid);
+
+
+			Api.JetAddColumn(session, tableid, "sha256_hash", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Binary,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
+				cbMax = 32
+			}, null, 0, out columnid);
+
+			var indexDef = "+key\0+version_instance_id\0+version_number\0+sha256_hash\0\0";
+			Api.JetCreateIndex(session, tableid, "pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+							   100);
+
+			indexDef = "+sha256_hash\0\0";
+			Api.JetCreateIndex(session, tableid, "by_hash", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+										   100);
+		}
+
+		private void CreateReplicationInfoTable(JET_DBID dbid)
+		{
+			JET_TABLEID tableid;
+			Api.JetCreateTable(session, dbid, "replication_info", 16, 100, out tableid);
+			JET_COLUMNID columnid;
+
+			Api.JetAddColumn(session, tableid, "key", new JET_COLUMNDEF
+			{
+				cbMax = 255,
+				coltyp = JET_coltyp.Text,
+				cp = JET_CP.Unicode,
+				grbit = ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "version_instance_id", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Binary,
+				cbMax = 16,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "version_number", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
+			}, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "sha256_hash", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Binary,
+				grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL,
+				cbMax = 32
+			}, null, 0, out columnid);
+
+			var indexDef = "+key\0+version_number\0+version_instance_id\0+sha256_hash\0\0";
+			Api.JetCreateIndex(session, tableid, "pk", CreateIndexGrbit.IndexPrimary, indexDef, indexDef.Length,
+							   100);
+
+			indexDef = "+key\0+version_number\0+version_instance_id\0\0";
+			Api.JetCreateIndex(session, tableid, "by_key_and_version", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
+							   100);
+		}
 
         private void CreateDataTable(JET_DBID dbid)
         {
@@ -187,6 +287,12 @@ namespace Rhino.PersistentHashTable
                 coltyp = JET_coltyp.Long,
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
             }, null, 0, out columnid);
+
+			Api.JetAddColumn(session, tableid, "tag", new JET_COLUMNDEF
+			{
+				coltyp = JET_coltyp.Long,
+				grbit = ColumndefGrbit.ColumnFixed
+			}, null, 0, out columnid);
 
             Api.JetAddColumn(session, tableid, "timestamp", new JET_COLUMNDEF
             {
