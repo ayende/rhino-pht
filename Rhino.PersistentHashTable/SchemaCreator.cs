@@ -9,7 +9,7 @@ namespace Rhino.PersistentHashTable
 	public class SchemaCreator
     {
         private readonly Session session;
-		public const string SchemaVersion = "1.7";
+		public const string SchemaVersion = "1.8";
 
 		public SchemaCreator(Session session)
         {
@@ -25,7 +25,7 @@ namespace Rhino.PersistentHashTable
                 using (var tx = new Transaction(session))
                 {
                     CreateDetailsTable(dbid);
-                    CreateIdentityTable(dbid);
+                    CreateNextHiTable(dbid);
                     CreateKeysTable(dbid);
                     CreateDataTable(dbid);
                     CreateListTable(dbid);
@@ -77,16 +77,22 @@ namespace Rhino.PersistentHashTable
 							   100);
 		}
 
-		private void CreateIdentityTable(JET_DBID dbid)
+		private void CreateNextHiTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
-			Api.JetCreateTable(session, dbid, "identity_generator", 16, 100, out tableid);
+			Api.JetCreateTable(session, dbid, "next_hi", 16, 100, out tableid);
 			JET_COLUMNID id;
-			Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
+			Api.JetAddColumn(session, tableid, "val", new JET_COLUMNDEF
 			{
 				coltyp = JET_coltyp.Long,
-				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnAutoincrement
+				grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed
 			}, null, 0, out id);
+
+			using (var update = new Update(session, tableid, JET_prep.Insert))
+			{
+				Api.SetColumn(session, tableid, id, 0);
+				update.Save();
+			}
 		}
 
 		private void CreateDetailsTable(JET_DBID dbid)

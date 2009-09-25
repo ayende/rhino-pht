@@ -47,6 +47,8 @@
     <Compile Include="Actions\EsentCommandBase.cs" />
     <Compile Include="Actions\ExpireDataFromPhtByTimestamp.cs" />
     <Compile Include="Actions\ExportToCsv.cs" />
+    <Compile Include="HiLoVersionGenerator.cs" />
+    <Compile Include="IVersionGenerator.cs" />
     <Compile Include="Parameters\AddItemRequest.cs" />
     <Compile Include="Parameters\GetItemsRequest.cs" />
     <Compile Include="Parameters\PutRequest.cs" />

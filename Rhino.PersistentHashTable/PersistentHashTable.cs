@@ -13,8 +13,9 @@ namespace Rhino.PersistentHashTable
         private JET_INSTANCE instance;
         private readonly string database;
         private readonly string path;
+    	private IVersionGenerator versionGenerator;
 
-        public Guid Id { get; private set; }
+    	public Guid Id { get; private set; }
 
         public PersistentHashTable(string database)
         {
@@ -24,6 +25,7 @@ namespace Rhino.PersistentHashTable
                 path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, database);
             this.database = Path.Combine(path, Path.GetFileName(database));
             Api.JetCreateInstance(out instance, database + Guid.NewGuid());
+
         }
 
         public void Initialize()
@@ -36,7 +38,9 @@ namespace Rhino.PersistentHashTable
                 EnsureDatabaseIsCreatedAndAttachToDatabase();
 
                 SetIdFromDb();
-            }
+
+				versionGenerator = new HiLoVersionGenerator(instance, 4096, database);
+			}
             catch (Exception e)
             {
                 Dispose();
@@ -54,7 +58,8 @@ namespace Rhino.PersistentHashTable
         		TempDirectory = Path.Combine(path, "temp"),
         		SystemDirectory = Path.Combine(path, "system"),
         		LogFileDirectory = Path.Combine(path, "logs"),
-                MaxVerPages = 8192
+                MaxVerPages = 8192,
+                MaxTemporaryTables = 8192,
         	};
         }
 
@@ -156,7 +161,10 @@ namespace Rhino.PersistentHashTable
 		[CLSCompliant(false)]
         public void Batch(Action<PersistentHashTableActions> action)
         {
-            using (var pht = new PersistentHashTableActions(instance, database, HttpRuntime.Cache, Id))
+			if (versionGenerator == null)
+				throw new InvalidOperationException("The PHT was not initialized. Did you forgot to call table.Initialize(); ?");
+
+            using (var pht = new PersistentHashTableActions(instance, database, HttpRuntime.Cache, Id, versionGenerator))
             {
                 action(pht);
             }

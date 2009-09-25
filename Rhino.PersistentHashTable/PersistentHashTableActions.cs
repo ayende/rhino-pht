@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web.Caching;
@@ -16,9 +17,8 @@ namespace Rhino.PersistentHashTable
 		private readonly Table data;
 		private readonly IDictionary<string, JET_COLUMNID> dataColumns;
 		private readonly JET_DBID dbid;
-		private readonly Table identity;
-		private readonly IDictionary<string, JET_COLUMNID> identityColumns;
 		private readonly Guid instanceId;
+		private readonly IVersionGenerator versionGenerator;
 		private readonly Table keys;
 		private readonly IDictionary<string, JET_COLUMNID> keysColumns;
 		private readonly Table list;
@@ -33,23 +33,23 @@ namespace Rhino.PersistentHashTable
 		public PersistentHashTableActions(JET_INSTANCE instance,
 		                                  string database,
 		                                  Cache cache,
-		                                  Guid instanceId)
+		                                  Guid instanceId, 
+			IVersionGenerator versionGenerator)
 		{
 			this.cache = cache;
 			this.instanceId = instanceId;
+			this.versionGenerator = versionGenerator;
 			session = new Session(instance);
 
 			transaction = new Transaction(session);
 			Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
 			keys = new Table(session, dbid, "keys", OpenTableGrbit.None);
 			data = new Table(session, dbid, "data", OpenTableGrbit.None);
-			identity = new Table(session, dbid, "identity_generator", OpenTableGrbit.None);
 			list = new Table(session, dbid, "lists", OpenTableGrbit.None);
 			replication = new Table(session, dbid, "replication_info", OpenTableGrbit.None);
 			replicationRemoval = new Table(session, dbid, "replication_removal_info", OpenTableGrbit.None);
 			keysColumns = Api.GetColumnDictionary(session, keys);
 			dataColumns = Api.GetColumnDictionary(session, data);
-			identityColumns = Api.GetColumnDictionary(session, identity);
 			listColumns = Api.GetColumnDictionary(session, list);
 			replicationColumns = Api.GetColumnDictionary(session, replication);
 			replicationRemovalColumns = Api.GetColumnDictionary(session, replicationRemoval);
@@ -96,8 +96,6 @@ namespace Rhino.PersistentHashTable
 				keys.Dispose();
 			if (data != null)
 				data.Dispose();
-			if (identity != null)
-				identity.Dispose();
 			if (list != null)
 				list.Dispose();
 			if (replication != null)
@@ -172,10 +170,8 @@ namespace Rhino.PersistentHashTable
 				instanceIdForRow = request.ReplicationVersion.InstanceId;
 
 			var versionNumber = request.ReplicationVersion == null
-			                    	?
-			                    		GenerateVersionNumber()
-			                    	:
-			                    		request.ReplicationVersion.Number;
+			                    	? versionGenerator.GenerateNextVersion()
+			                    	: request.ReplicationVersion.Number;
 			using (var update = new Update(session, keys, JET_prep.Insert))
 			{
 				Api.SetColumn(session, keys, keysColumns["key"], request.Key, Encoding.Unicode);
@@ -237,25 +233,6 @@ namespace Rhino.PersistentHashTable
 				hash = sha256.ComputeHash(request.Bytes);
 			}
 			return hash;
-		}
-
-		// insert into identity values(default);
-		// select @@identity into @new_identity
-		// delete from identity where id = @new_identity
-		private int GenerateVersionNumber()
-		{
-			var bookmark = new byte[256];
-			int bookmarkSize;
-			using (var update = new Update(session, identity, JET_prep.Insert))
-			{
-				// force identity generator
-				update.Save(bookmark, bookmark.Length, out bookmarkSize);
-			}
-			Api.JetGotoBookmark(session, identity, bookmark, bookmarkSize);
-			var version = Api.RetrieveColumnAsInt32(session, identity, identityColumns["id"]);
-			if (Api.TryMovePrevious(session, identity))
-				Api.JetDelete(session, identity);
-			return version.Value;
 		}
 
 		private void WriteAllParentVersions(IEnumerable<ValueVersion> parentVersions,
