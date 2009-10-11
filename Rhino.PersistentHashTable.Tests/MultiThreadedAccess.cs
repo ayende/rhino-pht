@@ -62,5 +62,59 @@ namespace Rhino.PersistentHashTable.Tests
 				Assert.Empty(exceptions);
 			}
 		}
+
+		[Fact]
+		public void CanPutSameKeyIntoPHTConcurrently()
+		{
+			var exceptions = new List<Exception>();
+			using (var table = new PersistentHashTable(testDatabase))
+			{
+				table.Initialize();
+				int count = 0;
+
+				const int threadCount = 50;
+				for (int i = 0; i < threadCount; i++)
+				{
+					new Thread(state =>
+					{
+						try
+						{
+							for (int k = 0; k < 10; k++)
+							{
+								table.Batch(actions =>
+								{
+									actions.Put(new PutRequest
+									{
+										Key = "foo",
+										Bytes = new byte[] { 4, 3, 5 }
+									});
+
+									actions.Commit();
+								});
+							}
+						}
+						catch (Exception e)
+						{
+							lock (exceptions)
+								exceptions.Add(e);
+						}
+						finally
+						{
+							Interlocked.Increment(ref count);
+						}
+					}, i)
+					{
+						IsBackground = true
+					}.Start(i);
+				}
+
+				while (Thread.VolatileRead(ref count) != threadCount)
+				{
+					Thread.Sleep(100);
+				}
+
+				Assert.Empty(exceptions);
+			}
+		}
 	}
 }

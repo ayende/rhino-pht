@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Web.Caching;
@@ -31,12 +30,22 @@ namespace Rhino.PersistentHashTable
 		private readonly Transaction transaction;
 
 		public PersistentHashTableActions(JET_INSTANCE instance,
-		                                  string database,
-		                                  Cache cache,
-		                                  Guid instanceId, 
-			IVersionGenerator versionGenerator)
+			string database,
+			Cache cache,
+			Guid instanceId,
+			IVersionGenerator versionGenerator,
+			IDictionary<string, JET_COLUMNID> keysColumns, 
+			IDictionary<string, JET_COLUMNID> listColumns, 
+			IDictionary<string, JET_COLUMNID> replicationColumns, 
+			IDictionary<string, JET_COLUMNID> replicationRemovalColumns, 
+			IDictionary<string, JET_COLUMNID> dataColumns)
 		{
 			this.cache = cache;
+			this.dataColumns = dataColumns;
+			this.replicationRemovalColumns = replicationRemovalColumns;
+			this.replicationColumns = replicationColumns;
+			this.listColumns = listColumns;
+			this.keysColumns = keysColumns;
 			this.instanceId = instanceId;
 			this.versionGenerator = versionGenerator;
 			session = new Session(instance);
@@ -48,11 +57,7 @@ namespace Rhino.PersistentHashTable
 			list = new Table(session, dbid, "lists", OpenTableGrbit.None);
 			replication = new Table(session, dbid, "replication_info", OpenTableGrbit.None);
 			replicationRemoval = new Table(session, dbid, "replication_removal_info", OpenTableGrbit.None);
-			keysColumns = Api.GetColumnDictionary(session, keys);
-			dataColumns = Api.GetColumnDictionary(session, data);
-			listColumns = Api.GetColumnDictionary(session, list);
-			replicationColumns = Api.GetColumnDictionary(session, replication);
-			replicationRemovalColumns = Api.GetColumnDictionary(session, replicationRemoval);
+		
 		}
 
 		public JET_DBID DatabaseId
@@ -120,7 +125,7 @@ namespace Rhino.PersistentHashTable
 			if (versions.Length == 1)
 			{
 				// Test that the key doesn't already exist with matching value
-				var values = Get(new GetRequest {Key = request.Key, SpecifiedVersion = versions[0]});
+				var values = Get(new GetRequest { Key = request.Key, SpecifiedVersion = versions[0] });
 				if (values.Length == 1 && values[0].Sha256Hash.SequenceEqual(hash))
 				{
 					return new PutResult
@@ -142,7 +147,7 @@ namespace Rhino.PersistentHashTable
 						DoesAllVersionsMatch(request.Key, request.ParentVersions);
 
 			if (doesAllVersionsMatch == false &&
-			    request.OptimisticConcurrency)
+				request.OptimisticConcurrency)
 			{
 				return new PutResult
 				{
@@ -170,8 +175,8 @@ namespace Rhino.PersistentHashTable
 				instanceIdForRow = request.ReplicationVersion.InstanceId;
 
 			var versionNumber = request.ReplicationVersion == null
-			                    	? versionGenerator.GenerateNextVersion()
-			                    	: request.ReplicationVersion.Number;
+									? versionGenerator.GenerateNextVersion()
+									: request.ReplicationVersion.Number;
 			using (var update = new Update(session, keys, JET_prep.Insert))
 			{
 				Api.SetColumn(session, keys, keysColumns["key"], request.Key, Encoding.Unicode);
@@ -236,8 +241,8 @@ namespace Rhino.PersistentHashTable
 		}
 
 		private void WriteAllParentVersions(IEnumerable<ValueVersion> parentVersions,
-		                                    Table table,
-		                                    IDictionary<string, JET_COLUMNID> columns)
+											Table table,
+											IDictionary<string, JET_COLUMNID> columns)
 		{
 			var index = 1;
 			foreach (var parentVersion in parentVersions)
@@ -249,16 +254,16 @@ namespace Rhino.PersistentHashTable
 				Buffer.BlockCopy(versionAsBytes, 0, buffer, 16, 4);
 
 				Api.JetSetColumn(session, table, columns["parentVersions"], buffer, buffer.Length, SetColumnGrbit.None,
-				                 new JET_SETINFO
-				                 {
-				                 	itagSequence = index
-				                 });
+								 new JET_SETINFO
+								 {
+									 itagSequence = index
+								 });
 				index += 1;
 			}
 		}
 
 		private bool DoesAllVersionsMatch(string key,
-		                                  ValueVersion[] parentVersions)
+										  ValueVersion[] parentVersions)
 		{
 			var activeVersions = GatherActiveVersions(key);
 
@@ -274,7 +279,7 @@ namespace Rhino.PersistentHashTable
 			for (var i = 0; i < activeVersions.Length; i++)
 			{
 				if (activeVersions[i].Number != parentVersions[i].Number ||
-				    activeVersions[i].InstanceId != parentVersions[i].InstanceId)
+					activeVersions[i].InstanceId != parentVersions[i].InstanceId)
 					return false;
 			}
 			return true;
@@ -282,21 +287,22 @@ namespace Rhino.PersistentHashTable
 
 		public Value[] Get(GetRequest request)
 		{
+
 			var values = new List<Value>();
 			var activeVersions =
 				request.SpecifiedVersion == null
 					?
 						GatherActiveVersions(request.Key)
 					:
-						new[] {request.SpecifiedVersion};
+						new[] { request.SpecifiedVersion };
 
 			var foundAllInCache = true;
 			foreach (var activeVersion in activeVersions)
 			{
 				var cachedValue = cache[GetKey(request.Key, activeVersion)] as Value;
 				if (cachedValue == null ||
-				    (cachedValue.ExpiresAt.HasValue &&
-				     DateTime.Now < cachedValue.ExpiresAt.Value))
+					(cachedValue.ExpiresAt.HasValue &&
+					 DateTime.Now < cachedValue.ExpiresAt.Value))
 				{
 					values.Clear();
 					foundAllInCache = false;
@@ -331,7 +337,7 @@ namespace Rhino.PersistentHashTable
 
 
 		private Value ReadValueFromDataTable(ValueVersion version,
-		                                     string key)
+											 string key)
 		{
 			var expiresAtBinary = Api.RetrieveColumnAsDouble(session, data, dataColumns["expiresAt"]);
 			DateTime? expiresAt = null;
@@ -356,7 +362,7 @@ namespace Rhino.PersistentHashTable
 		}
 
 		private ValueVersion[] GetParentVersions(Table table,
-		                                         IDictionary<string, JET_COLUMNID> columns)
+												 IDictionary<string, JET_COLUMNID> columns)
 		{
 			var versions = new List<ValueVersion>();
 
@@ -366,10 +372,10 @@ namespace Rhino.PersistentHashTable
 			{
 				var buffer = new byte[20];
 				Api.JetRetrieveColumn(session, table, columns["parentVersions"], buffer, 20, out size,
-				                      RetrieveColumnGrbit.None, new JET_RETINFO
-				                      {
-				                      	itagSequence = index
-				                      });
+									  RetrieveColumnGrbit.None, new JET_RETINFO
+									  {
+										  itagSequence = index
+									  });
 				if (size == 0)
 					break;
 				index += 1;
@@ -385,11 +391,11 @@ namespace Rhino.PersistentHashTable
 		}
 
 		private string GetKey(string key,
-		                      ValueVersion version)
+							  ValueVersion version)
 		{
 			return GetKey(key) + "#" +
-			       version.InstanceId + "/" +
-			       version.Number;
+				   version.InstanceId + "/" +
+				   version.Number;
 		}
 
 		private string GetKey(string key)
@@ -422,7 +428,7 @@ namespace Rhino.PersistentHashTable
 
 				Api.JetDelete(session, keys);
 
-				ApplyToKeyAndActiveVersions(data, new[] {version}, key, v => Api.JetDelete(session, data));
+				ApplyToKeyAndActiveVersions(data, new[] { version }, key, v => Api.JetDelete(session, data));
 
 				count += 1;
 				// We need to break the unbounded result set here, because there may be many
@@ -435,7 +441,7 @@ namespace Rhino.PersistentHashTable
 		}
 
 		private ValueVersion ReadVersion(Table table,
-		                                 IDictionary<string, JET_COLUMNID> columns)
+										 IDictionary<string, JET_COLUMNID> columns)
 		{
 			var versionNumber = Api.RetrieveColumnAsInt32(session, table, columns["version_number"]).Value;
 			var versionInstanceId = Api.RetrieveColumn(session, table, columns["version_instance_id"]);
@@ -456,7 +462,7 @@ namespace Rhino.PersistentHashTable
 		// delete from replicatio
 		// where key = key and version in (versions)
 		private void DeleteAllKeyValuesForVersions(string key,
-		                                           IEnumerable<ValueVersion> versions)
+												   IEnumerable<ValueVersion> versions)
 		{
 			ApplyToKeyAndActiveVersions(keys, versions, key,
 			                            version => Api.JetDelete(session, keys));
@@ -464,17 +470,17 @@ namespace Rhino.PersistentHashTable
 			ApplyToKeyAndActiveVersions(data, versions, key, version =>
 			                                                 Api.JetDelete(session, data));
 
-			ApplyToKeyAndActiveVersions(replication, versions, key, 
-				version => Api.JetDelete(session, replication));
+			ApplyToKeyAndActiveVersions(replication, versions, key,
+			                            version => Api.JetDelete(session, replication));
 		}
 
 		// select * from :table 
 		// where pk.0 = :key and pk.1 = :version.number
 		// and pk.3 = :version.instanceId
 		private void ApplyToKeyAndActiveVersions(Table table,
-		                                         IEnumerable<ValueVersion> versions,
-		                                         string key,
-		                                         Action<ValueVersion> action)
+												 IEnumerable<ValueVersion> versions,
+												 string key,
+												 Action<ValueVersion> action)
 		{
 			Api.JetSetCurrentIndex(session, table, "pk");
 			foreach (var version in versions)
@@ -496,7 +502,7 @@ namespace Rhino.PersistentHashTable
 		{
 			var cachedActiveVersions = cache[GetKey(key)];
 			if (cachedActiveVersions != null)
-				return (ValueVersion[]) cachedActiveVersions;
+				return (ValueVersion[])cachedActiveVersions;
 
 			Api.JetSetCurrentIndex(session, keys, "by_key");
 			Api.MakeKey(session, keys, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -506,7 +512,7 @@ namespace Rhino.PersistentHashTable
 
 			Api.MakeKey(session, keys, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.JetSetIndexRange(session, keys,
-			                     SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+								 SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 
 			var ids = new List<ValueVersion>();
 			do
@@ -559,7 +565,7 @@ namespace Rhino.PersistentHashTable
 			}
 
 			Api.JetGotoBookmark(session, list, bookmark, actualBookmarkSize);
-			return (int) Api.RetrieveColumnAsInt32(session, list, listColumns["id"]);
+			return (int)Api.RetrieveColumnAsInt32(session, list, listColumns["id"]);
 		}
 
 		public KeyValuePair<int, byte[]>[] GetItems(GetItemsRequest request)
@@ -571,7 +577,7 @@ namespace Rhino.PersistentHashTable
 
 			Api.MakeKey(session, list, request.Key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.JetSetIndexRange(session, list,
-			                     SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+								 SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 
 			var results = new List<KeyValuePair<int, byte[]>>();
 			do
@@ -609,7 +615,7 @@ namespace Rhino.PersistentHashTable
 
 			Api.MakeKey(session, keys, tag, MakeKeyGrbit.NewKey);
 			Api.JetSetIndexRange(session, keys,
-			                     SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+								 SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 
 			do
 			{
@@ -622,8 +628,8 @@ namespace Rhino.PersistentHashTable
 		}
 
 		public bool HasReplicationInfo(string key,
-		                               ValueVersion version,
-		                               byte[] hash)
+									   ValueVersion version,
+									   byte[] hash)
 		{
 			Api.JetSetCurrentIndex(session, replication, "pk");
 			Api.MakeKey(session, replication, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -636,8 +642,8 @@ namespace Rhino.PersistentHashTable
 
 
 		public void AddReplicationInfo(string key,
-		                               ValueVersion version,
-		                               byte[] hash)
+									   ValueVersion version,
+									   byte[] hash)
 		{
 			using (var update = new Update(session, replication, JET_prep.Insert))
 			{
@@ -694,7 +700,7 @@ namespace Rhino.PersistentHashTable
 		}
 
 		public IEnumerable<byte[]> GetReplicationHashes(string key,
-		                                        ValueVersion version)
+												ValueVersion version)
 		{
 			Api.JetSetCurrentIndex(session, replication, "by_key_and_version");
 			Api.MakeKey(session, replication, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -709,7 +715,7 @@ namespace Rhino.PersistentHashTable
 			Api.MakeKey(session, replication, version.InstanceId.ToByteArray(), MakeKeyGrbit.None);
 
 			Api.JetSetIndexRange(session, replication,
-			                     SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
+								 SetIndexRangeGrbit.RangeUpperLimit | SetIndexRangeGrbit.RangeInclusive);
 
 			do
 			{
